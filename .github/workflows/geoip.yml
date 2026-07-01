@@ -1,4 +1,4 @@
-name: Build GeoIP Hydra Fixed
+name: Build GeoIP Official
 on:
   workflow_dispatch:
   push:
@@ -17,10 +17,10 @@ jobs:
         with:
           path: main
 
-      - name: Checkout Loyalsoldier builder
+      - name: Checkout v2fly geoip builder
         uses: actions/checkout@v4
         with:
-          repository: Loyalsoldier/geoip
+          repository: v2fly/geoip
           path: builder
 
       - name: Setup Go
@@ -28,7 +28,7 @@ jobs:
         with:
           go-version: '>=1.21'
 
-      # Исправляем формат IP (добавляем /32 к одиночным адресам)
+      # Автоматически исправляем формат IP (добавляем /32 к одиночным адресам)
       - name: Fix CIDR and Clean Files
         run: |
           find main/geoip -type f | while read file; do
@@ -41,17 +41,15 @@ jobs:
 
       - name: Build geoip.dat
         run: |
+          # Копируем твой конфиг и папку с IP в папку сборщика
+          cp main/config.json builder/
+          cp -r main/geoip builder/
           cd builder
-          # Собираем инструмент
-          go build -o geoip_tool
-          # Копируем твои данные
-          cp ../main/config.json .
-          cp -r ../main/geoip .
-          # Запускаем сборку (теперь тип 'text' в конфиге сработает)
-          ./geoip_tool convert -c config.json
-          # Подготовка к релизу
+          # Запускаем сборку через официальный инструмент
+          go run ./ -c config.json
+          # Файл geoip.dat создастся в текущей папке
           mkdir -p ../release
-          cp output/dat/geoip.dat ../release/
+          cp geoip.dat ../release/
 
       - name: Release
         uses: softprops/action-gh-release@v2
