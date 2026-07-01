@@ -3,7 +3,7 @@ on:
   workflow_dispatch:
   push:
     branches: [ master, main ]
-    paths: [ 'geoip/**', 'config.json' ]
+    paths: [ 'geoip/**' ]
 
 permissions:
   contents: write
@@ -17,38 +17,53 @@ jobs:
         with:
           path: my_data
 
-      - name: Checkout Loyalsoldier builder
-        uses: actions/checkout@v4
-        with:
-          repository: Loyalsoldier/geoip
-          path: builder
-
-      - name: Setup Go
+      - name: Set up Go
         uses: actions/setup-go@v5
         with:
           go-version: '>=1.21'
 
-      - name: Build geoip.dat
+      # ШАГ 1: Исправляем IP (добавляем /32 там, где его нет)
+      - name: Fix IP format
         run: |
-          # Переходим в папку сборщика и собираем его
+          find my_data/geoip -type f | while read file; do
+            # Удаляем пустые строки и пробелы
+            sed -i '/^[[:space:]]*$/d' "$file"
+            # Добавляем /32 к одиночным IP (где нет слэша)
+            sed -i '/^[0-9.]*$/s/$/\/32/' "$file"
+          done
+
+      # ШАГ 2: Скачиваем и собираем компилятор Loyalsoldier
+      - name: Build Compiler
+        run: |
+          git clone https://github.com/Loyalsoldier/geoip.git builder
           cd builder
           go build -o geoip_tool
+
+      # ШАГ 3: Генерируем правильный config.json и собираем .dat
+      - name: Generate Config and Build
+        run: |
+          cd builder
+          # Генерируем конфиг на лету из твоих файлов
+          echo '{"input": [' > config.json
+          first=true
+          for f in ../my_data/geoip/*; do
+            name=$(basename "$f")
+            if [ "$first" = true ]; then first=false; else echo ',' >> config.json; fi
+            echo "{\"type\": \"plaintext\", \"action\": \"add\", \"args\": {\"name\": \"$name\", \"uri\": \"../my_data/geoip/$name\"}}" >> config.json
+          done
+          echo '], "output": [{"type": "v2raygeoip", "action": "output", "args": {"uri": "geoip.dat"}}]}' >> config.json
           
-          # Копируем твой конфиг и папку с IP внутрь сборщика
-          cp ../my_data/config.json .
-          cp -r ../my_data/geoip .
-          
-          # Запускаем конвертацию
+          # Запускаем сборку
           ./geoip_tool convert -c config.json
-          
-          # Создаем папку для результата и копируем файл
           mkdir -p ../release
           cp output/dat/geoip.dat ../release/
 
+      # ШАГ 4: Публикация в Releases
       - name: Release
         uses: softprops/action-gh-release@v2
         with:
           tag_name: latest
+          name: "Latest GeoIP Build"
           files: release/geoip.dat
           make_latest: true
         env:
