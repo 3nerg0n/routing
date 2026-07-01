@@ -1,4 +1,4 @@
-name: Build GeoIP Final Fix
+name: Build GeoIP Final
 on:
   workflow_dispatch:
   push:
@@ -12,48 +12,46 @@ jobs:
   build:
     runs-on: ubuntu-latest
     steps:
-      - name: Checkout your repo
+      - name: Checkout repo
         uses: actions/checkout@v4
-        with:
-          path: main
 
-      - name: Checkout v2fly geoip builder
-        uses: actions/checkout@v4
-        with:
-          repository: v2fly/geoip
-          path: builder
-
-      - name: Setup Go
+      - name: Set up Go
         uses: actions/setup-go@v5
         with:
           go-version: '>=1.21'
 
-      # ШАГ 1: Подготовка файлов (чистка и исправление IP)
-      - name: Prepare and Fix IP files
+      # ШАГ 1: Исправляем формат IP (добавляем /32 и чистим мусор)
+      - name: Fix IP format
         run: |
-          mkdir -p builder/data
-          find main/geoip -type f | while read file; do
+          mkdir -p ./cleaned_geoip
+          # Проходим по всем файлам в папке geoip
+          find geoip -type f | while read file; do
             name=$(basename "$file")
-            # Удаляем мусор и добавляем /32 к одиночным IP
+            # Удаляем комментарии, пробелы и пустые строки. 
+            # Если в строке только IP (без /) — добавляем /32
             sed -E 's/#[.*]//g; s/[[:space:]]//g; /^[[:space:]]*$/d' "$file" | \
-            sed -E 's/^([0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3})$/\1\/32/' > "builder/data/$name"
+            sed -E 's/^([0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3})$/\1\/32/' > "./cleaned_geoip/$name"
           done
-          # Проверка: если папка пуста, создать тестовый файл, чтобы не было ошибки
-          [ "$(ls -A builder/data)" ] || echo "1.1.1.1/32" > builder/data/dummy
+          echo "Files prepared in cleaned_geoip:"
+          ls ./cleaned_geoip
 
-      # ШАГ 2: Сборка с правильным конфигом
+      # ШАГ 2: Устанавливаем компилятор напрямую
+      - name: Install GeoIP Tool
+        run: |
+          go install github.com/v2fly/geoip@latest
+
+      # ШАГ 3: Сборка geoip.dat
       - name: Build geoip.dat
         run: |
-          cd builder
-          # Создаем конфиг прямо здесь. Тип v2raygeoip идеально ест папки.
-          cat <<EOF > config.json
+          # Создаем конфиг для официального компилятора v2fly
+          cat <<EOF > geoip_config.json
           {
             "input": [
               {
                 "type": "v2raygeoip",
                 "action": "add",
                 "args": {
-                  "uri": "data/"
+                  "uri": "./cleaned_geoip"
                 }
               }
             ],
@@ -68,27 +66,20 @@ jobs:
             ]
           }
           EOF
-          # Запускаем сборку
-          go run ./ -c config.json
+          # Запускаем установленный ранее инструмент
+          $(go env GOPATH)/bin/geoip -c geoip_config.json
           
-          # Проверяем размер файла (если меньше 1000 байт - значит ошибка)
-          FILE_SIZE=$(stat -c%s "geoip.dat")
-          echo "Generated file size: $FILE_SIZE bytes"
-          if [ $FILE_SIZE -le 700 ]; then
-            echo "Error: geoip.dat is empty!"
-            exit 1
-          fi
-          
-          mkdir -p ../release
-          cp geoip.dat ../release/
+          # Проверка размера (должен быть больше 1000 байт)
+          size=$(stat -c%s "geoip.dat")
+          echo "Final size: $size bytes"
 
-      # ШАГ 3: Публикация
+      # ШАГ 4: Публикация в Releases
       - name: Release
         uses: softprops/action-gh-release@v2
         with:
           tag_name: latest
           name: "Latest GeoIP Build"
-          files: release/geoip.dat
+          files: geoip.dat
           make_latest: true
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
