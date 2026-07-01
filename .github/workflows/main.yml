@@ -1,0 +1,37 @@
+name: Build Rules
+on:
+  push:
+    branches:
+      - main
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Install v2ray-rules-dat
+        run: |
+          wget https://github.com/v2fly/v2ray-rules-dat/releases/latest/download/v2ray-rules-dat-linux-64.zip
+          unzip v2ray-rules-dat-linux-64.zip
+          chmod +x v2ray-rules-dat
+
+      - name: Compile DAT files
+        run: |
+          ./v2ray-rules-dat -type geosite -dir geosite/ -output geosite.dat
+          ./v2ray-rules-dat -type geoip -dir geoip/ -output geoip.dat
+
+      - name: Upload to Release
+        uses: softprops/action-gh-release@v1
+        with:
+          tag_name: latest
+          files: |
+            geosite.dat
+            geoip.dat
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
