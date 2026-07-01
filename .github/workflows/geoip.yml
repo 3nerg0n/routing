@@ -3,7 +3,7 @@ on:
   workflow_dispatch:
   push:
     branches: [ master, main ]
-    paths: [ 'geoip/**', 'config.json' ]
+    paths: [ 'geoip/**' ]
 
 permissions:
   contents: write
@@ -28,35 +28,47 @@ jobs:
         with:
           go-version: '>=1.21'
 
-      # Автоматически исправляем формат IP (добавляем /32 к одиночным адресам)
-      - name: Fix CIDR and Clean Files
+      # ШАГ 1: Исправляем IP (добавляем /32 там, где его нет)
+      - name: Fix IP format
         run: |
           find main/geoip -type f | while read file; do
-            sed -i '/^[[:space:]]*$/d' "$file" # Удалить пустые строки
-            sed -i '/^#/d' "$file"             # Удалить комментарии
-            sed -i 's/^[[:space:]]*//;s/[[:space:]]*$//' "$file" # Убрать пробелы
-            # Если в строке только IP без слэша - добавить /32
+            # Удаляем пустые строки и комментарии
+            sed -i '/^[[:space:]]*$/d' "$file"
+            sed -i '/^#/d' "$file"
+            # Добавляем /32 к одиночным IP
             sed -i -E 's/^([0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3})$/\1\/32/' "$file"
           done
 
+      # ШАГ 2: Сборка инструмента и генерация файла
       - name: Build geoip.dat
         run: |
           cd builder
-          # Собираем сам инструмент компиляции
+          # Компилируем сам сборщик
           go build -o geoip_tool
-          # Копируем твои данные внутрь сборщика
-          cp ../main/config.json .
-          cp -r ../main/geoip .
-          # Запускаем сборку по твоему конфигу
+          
+          # Генерируем config.json динамически
+          # Используем тип "text", как в примере hydraponique
+          echo '{"input": [' > config.json
+          FIRST=true
+          for f in $(ls ../main/geoip); do
+            if [ "$FIRST" = true ]; then FIRST=false; else echo ',' >> config.json; fi
+            echo "{\"type\": \"text\", \"action\": \"add\", \"args\": {\"name\": \"$f\", \"uri\": \"../main/geoip/$f\"}}" >> config.json
+          done
+          echo '], "output": [{"type": "v2rayGeoIPDat", "action": "output", "args": {"outputName": "geoip.dat"}}]}' >> config.json
+          
+          # Запускаем конвертацию
           ./geoip_tool convert -c config.json
-          # Подготавливаем файл для релиза (он будет в папке output/dat/)
+          
+          # Копируем результат
           mkdir -p ../release
           cp output/dat/geoip.dat ../release/
 
+      # ШАГ 3: Публикация в Releases
       - name: Release
         uses: softprops/action-gh-release@v2
         with:
           tag_name: latest
+          name: "Latest GeoIP Build"
           files: release/geoip.dat
           make_latest: true
         env:
