@@ -28,28 +28,25 @@ jobs:
         with:
           go-version: '>=1.21'
 
-      # ШАГ 1: Тщательная очистка IP и проверка
+      # ШАГ 1: Правильная очистка IP (исправленный sed)
       - name: Clean and Verify IP files
         run: |
           mkdir -p cleaned_geoip
           echo "--- Processing files ---"
-          # Проверяем, есть ли вообще файлы в папке
-          ls -R main/geoip
-          
           find main/geoip -type f | while read file; do
             name=$(basename "$file")
-            # 1. Удаляем \r (Windows endings), комментарии и пробелы
-            # 2. Удаляем пустые строки
-            # 3. Добавляем /32, если в строке только IP без слэша
+            # 1. Убираем символы Windows (\r), комментарии (#) и пробелы
+            # 2. Добавляем /32, если в строке только цифры и точки (одиночный IP)
             sed 's/\r//g; s/#.*//g; s/[[:space:]]//g' "$file" | grep -v '^$' | \
             sed -E 's/^([0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3})$/\1\/32/' > "cleaned_geoip/$name"
             
-            echo "File $name: $(wc -l < cleaned_geoip/$name) IPs found"
+            echo "File $name: $(wc -l < cleaned_geoip/$name) valid lines"
           done
 
-      # ШАГ 2: Генерация конфига (используем тип "text")
-      - name: Generate Config
+      # ШАГ 2: Генерация конфига и сборка
+      - name: Build geoip.dat
         run: |
+          # Создаем конфиг. ВАЖНО: используем тип "text" для каждого файла
           echo '{"input": [' > config.json
           FIRST=true
           for f in cleaned_geoip/*; do
@@ -59,12 +56,9 @@ jobs:
           done
           echo '], "output": [{"type": "v2rayGeoIPDat", "action": "output", "args": {"outputName": "geoip.dat"}}]}' >> config.json
           
-          echo "--- Generated config.json ---"
+          echo "--- Config.json content ---"
           cat config.json
 
-      # ШАГ 3: Сборка
-      - name: Build geoip.dat
-        run: |
           cd builder
           go build -o geoip_tool
           # Запускаем сборку
@@ -75,8 +69,9 @@ jobs:
           cp output/dat/geoip.dat ../release/
           size=$(stat -c%s "../release/geoip.dat")
           echo "--- Final size: $size bytes ---"
+          if [ $size -le 700 ]; then echo "ERROR: File is empty!"; exit 1; fi
 
-      # ШАГ 4: Публикация
+      # ШАГ 3: Публикация
       - name: Release
         uses: softprops/action-gh-release@v2
         with:
