@@ -1,4 +1,4 @@
-name: Build GeoIP Hydra
+name: Build GeoIP Hydra Fixed
 on:
   workflow_dispatch:
   push:
@@ -28,7 +28,7 @@ jobs:
         with:
           go-version: '>=1.21'
 
-      # Автоматически исправляем формат IP (добавляем /32 к одиночным адресам)
+      # Исправляем формат IP (добавляем /32 к одиночным адресам)
       - name: Fix CIDR and Clean Files
         run: |
           find main/geoip -type f | while read file; do
@@ -42,14 +42,14 @@ jobs:
       - name: Build geoip.dat
         run: |
           cd builder
-          # Собираем сам инструмент компиляции
+          # Собираем инструмент
           go build -o geoip_tool
-          # Копируем твои данные внутрь сборщика
+          # Копируем твои данные
           cp ../main/config.json .
           cp -r ../main/geoip .
-          # Запускаем сборку по твоему конфигу
+          # Запускаем сборку (теперь тип 'text' в конфиге сработает)
           ./geoip_tool convert -c config.json
-          # Подготавливаем файл для релиза
+          # Подготовка к релизу
           mkdir -p ../release
           cp output/dat/geoip.dat ../release/
 
