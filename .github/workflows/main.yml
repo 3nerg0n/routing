@@ -15,23 +15,31 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v4
 
-      - name: Install v2ray-rules-dat
+      - name: Set up Go
+        uses: actions/setup-go@v4
+        with:
+          go-version: '>=1.20'
+
+      - name: Install Compilers
         run: |
-          # Исправленная ссылка (добавлено amd64)
-          wget https://github.com/v2fly/v2ray-rules-dat/releases/latest/download/v2ray-rules-dat-linux-amd64.zip
-          unzip v2ray-rules-dat-linux-amd64.zip
-          chmod +x v2ray-rules-dat
+          # Устанавливаем официальные компиляторы прямо из исходников
+          go install github.com/v2fly/domain-list-community@latest
+          go install github.com/v2fly/geoip/command/geoip@latest
 
       - name: Prepare directories
         run: |
-          # Создаем папки, если их забыли создать вручную
           mkdir -p geosite
           mkdir -p geoip
 
-      - name: Compile DAT files
+      - name: Build geosite.dat
         run: |
-          ./v2ray-rules-dat -type geosite -dir geosite/ -output geosite.dat
-          ./v2ray-rules-dat -type geoip -dir geoip/ -output geoip.dat
+          # Компилируем домены из папки geosite/
+          $(go env GOPATH)/bin/domain-list-community -datapath=geosite/ -outputname=geosite.dat
+
+      - name: Build geoip.dat
+        run: |
+          # Компилируем IP из папки geoip/
+          $(go env GOPATH)/bin/geoip -i geoip/ -o geoip.dat
 
       - name: Release DAT files
         uses: softprops/action-gh-release@v1
