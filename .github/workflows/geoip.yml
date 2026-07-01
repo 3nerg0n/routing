@@ -1,4 +1,4 @@
-name: Build GeoIP Final
+name: Build GeoIP Final Fix
 on:
   workflow_dispatch:
   push:
@@ -40,35 +40,32 @@ jobs:
             sed -E 's/^([0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3})$/\1\/32/' > "cleaned_geoip/$name"
           done
 
-      # ШАГ 2: Сборка geoip.dat
+      # ШАГ 2: Генерация config.json (по одному файлу, тип "text")
+      - name: Generate Config
+        run: |
+          echo '{"input": [' > config.json
+          FIRST=true
+          # Перебираем все исправленные файлы
+          for f in cleaned_geoip/*; do
+            name=$(basename "$f")
+            if [ "$FIRST" = true ]; then FIRST=false; else echo ',' >> config.json; fi
+            # ВАЖНО: используем тип "text" и индивидуальный путь к каждому файлу
+            echo "{\"type\": \"text\", \"action\": \"add\", \"args\": {\"name\": \"$name\", \"uri\": \"../cleaned_geoip/$name\"}}" >> config.json
+          done
+          # Добавляем блок вывода (тип v2rayGeoIPDat как в примере)
+          echo '], "output": [{"type": "v2rayGeoIPDat", "action": "output", "args": {"outputName": "geoip.dat"}}]}' >> config.json
+          
+          echo "Generated config.json:"
+          cat config.json
+
+      # ШАГ 3: Сборка
       - name: Build geoip.dat
         run: |
           cd builder
-          # Создаем конфиг специально для этого сборщика
-          cat <<EOF > config.json
-          {
-            "input": [
-              {
-                "type": "plaintext",
-                "action": "add",
-                "args": {
-                  "uri": "../cleaned_geoip"
-                }
-              }
-            ],
-            "output": [
-              {
-                "type": "v2rayGeoIPDat",
-                "action": "output",
-                "args": {
-                  "outputName": "geoip.dat"
-                }
-              }
-            ]
-          }
-          EOF
-          # Запускаем сборку напрямую из исходников
-          go run ./ convert -c config.json
+          # Собираем сам инструмент
+          go build -o geoip_tool
+          # Запускаем конвертацию с нашим сгенерированным конфигом
+          ./geoip_tool convert -c ../config.json
           
           # Проверяем результат
           mkdir -p ../release
@@ -78,7 +75,7 @@ jobs:
           size=$(stat -c%s "../release/geoip.dat")
           echo "Final size: $size bytes"
 
-      # ШАГ 3: Публикация в Releases
+      # ШАГ 4: Публикация
       - name: Release
         uses: softprops/action-gh-release@v2
         with:
