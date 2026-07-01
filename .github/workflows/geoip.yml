@@ -28,37 +28,43 @@ jobs:
           find my_data/geoip -type f | while read file; do
             # Удаляем пустые строки и пробелы
             sed -i '/^[[:space:]]*$/d' "$file"
+            # Удаляем комментарии
+            sed -i '/^#/d' "$file"
             # Добавляем /32 к одиночным IP (где нет слэша)
             sed -i '/^[0-9.]*$/s/$/\/32/' "$file"
           done
 
-      # ШАГ 2: Скачиваем и собираем компилятор Loyalsoldier
-      - name: Build Compiler
+      # ШАГ 2: Собираем компилятор Loyalsoldier (именно он понимает plaintext)
+      - name: Build Loyalsoldier Compiler
         run: |
           git clone https://github.com/Loyalsoldier/geoip.git builder
           cd builder
           go build -o geoip_tool
 
-      # ШАГ 3: Генерируем правильный config.json и собираем .dat
+      # ШАГ 3: Генерируем ПРАВИЛЬНЫЙ config.json и собираем .dat
       - name: Generate Config and Build
         run: |
           cd builder
-          # Генерируем конфиг на лету из твоих файлов
+          # Генерируем конфиг. ВАЖНО: тип должен быть "plaintext"
           echo '{"input": [' > config.json
           first=true
+          # Перебираем все файлы из твоей папки geoip
           for f in ../my_data/geoip/*; do
             name=$(basename "$f")
             if [ "$first" = true ]; then first=false; else echo ',' >> config.json; fi
+            # Используем тип plaintext, который понимает этот сборщик
             echo "{\"type\": \"plaintext\", \"action\": \"add\", \"args\": {\"name\": \"$name\", \"uri\": \"../my_data/geoip/$name\"}}" >> config.json
           done
           echo '], "output": [{"type": "v2raygeoip", "action": "output", "args": {"uri": "geoip.dat"}}]}' >> config.json
           
           # Запускаем сборку
           ./geoip_tool convert -c config.json
+          
+          # Создаем папку для релиза
           mkdir -p ../release
           cp output/dat/geoip.dat ../release/
 
-      # ШАГ 4: Публикация в Releases
+      # ШАГ 4: Публикация
       - name: Release
         uses: softprops/action-gh-release@v2
         with:
