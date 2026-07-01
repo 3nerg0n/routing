@@ -5,36 +5,46 @@ on:
     branches: [ master, main ]
     paths: [ 'geoip/**' ]
 
+permissions:
+  contents: write
+
 jobs:
   build:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout your repo
         uses: actions/checkout@v4
+        with:
+          path: my_data
+
+      - name: Checkout v2fly geoip builder
+        uses: actions/checkout@v4
+        with:
+          repository: v2fly/geoip
+          path: builder
 
       - name: Setup Go
         uses: actions/setup-go@v4
         with:
           go-version: '>=1.20'
 
-      - name: Install GeoIP tool
-        run: go install github.com/v2fly/geoip@latest
-
       - name: Build geoip.dat
         run: |
-          # Создаем конфиг для сборки из твоей папки geoip/
+          # Создаем конфиг для сборщика
           cat <<EOF > geoip_config.json
           {
-            "input": [ { "type": "v2raygeoip", "action": "add", "args": { "uri": "geoip/" } } ],
-            "output": [ { "type": "v2raygeoip", "action": "output", "args": { "uri": "geoip.dat" } } ]
+            "input": [ { "type": "v2raygeoip", "action": "add", "args": { "uri": "my_data/geoip/" } } ],
+            "output": [ { "type": "v2raygeoip", "action": "output", "args": { "uri": "release/geoip.dat" } } ]
           }
           EOF
-          $(go env GOPATH)/bin/geoip -c geoip_config.json
+          mkdir -p release
+          cd builder
+          go run ./ -c ../geoip_config.json
 
       - name: Release
         uses: softprops/action-gh-release@v1
         with:
           tag_name: latest
-          files: geoip.dat
+          files: release/geoip.dat
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
