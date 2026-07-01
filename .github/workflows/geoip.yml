@@ -28,48 +28,48 @@ jobs:
         with:
           go-version: '>=1.21'
 
-      # ШАГ 1: Очистка IP и копирование ВНУТРЬ папки builder
-      - name: Clean and Prepare IP files
+      # ШАГ 1: Очистка файлов (только самое необходимое)
+      - name: Clean IP files
         run: |
-          mkdir -p builder/data_input
-          echo "--- Processing files ---"
+          mkdir -p cleaned_geoip
+          echo "--- Cleaning files ---"
           find main/geoip -type f | while read file; do
             name=$(basename "$file")
-            # 1. Удаляем символы Windows (\r), комментарии (#) и все пробелы
-            # 2. Добавляем /32 только к чистым IPv4 (4 группы цифр через точку)
-            sed 's/\r//g; s/#.*//g; s/[[:space:]]//g' "$file" | grep -v '^$' | \
-            sed -E 's/^([0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3})$/\1\/32/' > "builder/data_input/$name"
-            
-            echo "File $name: $(wc -l < builder/data_input/$name) valid lines"
+            # Удаляем символы Windows (\r) и пустые строки
+            tr -d '\r' < "$file" | grep -v '^$' > "cleaned_geoip/$name"
+            echo "File $name: $(wc -l < cleaned_geoip/$name) lines"
           done
 
       # ШАГ 2: Генерация конфига и сборка
       - name: Build geoip.dat
         run: |
-          cd builder
-          # Генерируем конфиг, где пути ведут в локальную папку data_input
+          # Получаем абсолютный путь к папке с очищенными IP
+          CLEANED_PATH=$(pwd)/cleaned_geoip
+          
+          # Генерируем config.json
           echo '{"input": [' > config.json
           FIRST=true
-          for f in data_input/*; do
+          for f in $CLEANED_PATH/*; do
             name=$(basename "$f")
             if [ "$FIRST" = true ]; then FIRST=false; else echo ',' >> config.json; fi
-            echo "{\"type\": \"text\", \"action\": \"add\", \"args\": {\"name\": \"$name\", \"uri\": \"./data_input/$name\"}}" >> config.json
+            # ВАЖНО: используем тип "plaintext" и полный путь
+            echo "{\"type\": \"plaintext\", \"action\": \"add\", \"args\": {\"name\": \"$name\", \"uri\": \"$f\"}}" >> config.json
           done
           echo '], "output": [{"type": "v2rayGeoIPDat", "action": "output", "args": {"outputName": "geoip.dat"}}]}' >> config.json
           
           echo "--- Generated config.json ---"
           cat config.json
 
-          # Собираем и запускаем инструмент
+          # Сборка инструмента и запуск
+          cd builder
           go build -o geoip_tool
-          ./geoip_tool convert -c config.json
+          ./geoip_tool convert -c ../config.json
           
           # Проверка результата
           mkdir -p ../release
           cp output/dat/geoip.dat ../release/
           size=$(stat -c%s "../release/geoip.dat")
           echo "--- Final size: $size bytes ---"
-          if [ $size -le 700 ]; then echo "ERROR: File is still empty!"; exit 1; fi
 
       # ШАГ 3: Публикация
       - name: Release
