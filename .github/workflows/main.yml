@@ -22,25 +22,45 @@ jobs:
 
       - name: Install Compilers
         run: |
-          # Устанавливаем компиляторы (исправленные пути)
           go install github.com/v2fly/domain-list-community@latest
           go install github.com/v2fly/geoip@latest
 
       - name: Prepare directories
         run: |
-          # Убеждаемся, что папки существуют
           mkdir -p geosite
           mkdir -p geoip
 
       - name: Build geosite.dat
         run: |
-          # Компиляция доменов
           $(go env GOPATH)/bin/domain-list-community -datapath=geosite/ -outputname=geosite.dat
 
       - name: Build geoip.dat
         run: |
-          # Компиляция IP (теперь используем правильный бинарник geoip)
-          $(go env GOPATH)/bin/geoip -i geoip/ -o geoip.dat
+          # Создаем файл конфигурации для компилятора geoip
+          cat <<EOF > geoip_config.json
+          {
+            "input": [
+              {
+                "type": "v2raygeoip",
+                "action": "add",
+                "args": {
+                  "uri": "geoip/"
+                }
+              }
+            ],
+            "output": [
+              {
+                "type": "v2raygeoip",
+                "action": "output",
+                "args": {
+                  "uri": "geoip.dat"
+                }
+              }
+            ]
+          }
+          EOF
+          # Запускаем компиляцию через конфиг
+          $(go env GOPATH)/bin/geoip -c geoip_config.json
 
       - name: Release DAT files
         uses: softprops/action-gh-release@v1
