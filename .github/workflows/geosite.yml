@@ -5,6 +5,9 @@ on:
     branches: [ master, main ]
     paths: [ 'data/**' ]
 
+permissions:
+  contents: write
+
 jobs:
   build:
     runs-on: ubuntu-latest
@@ -12,9 +15,9 @@ jobs:
       - name: Checkout your repo
         uses: actions/checkout@v4
         with:
-          path: main
+          path: my_data
 
-      - name: Checkout builder
+      - name: Checkout v2fly builder
         uses: actions/checkout@v4
         with:
           repository: v2fly/domain-list-community
@@ -27,16 +30,16 @@ jobs:
 
       - name: Build geosite.dat
         run: |
-          # Копируем твои файлы в папку данных сборщика
-          cp -rf main/data/* builder/data/
+          # Очищаем стандартные данные сборщика и копируем твои
+          rm -rf builder/data/*
+          cp -rf my_data/data/* builder/data/
           cd builder
           go run ./ --outputdir=../release
 
-      - name: Release
+      - name: Rename and Release
         uses: softprops/action-gh-release@v1
         with:
           tag_name: latest
           files: release/dlc.dat
-          # Мы переименуем dlc.dat в geosite.dat для удобства
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
