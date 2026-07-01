@@ -22,23 +22,24 @@ jobs:
 
       - name: Install Compilers
         run: |
-          # Устанавливаем официальные компиляторы прямо из исходников
+          # Устанавливаем компиляторы (исправленные пути)
           go install github.com/v2fly/domain-list-community@latest
-          go install github.com/v2fly/geoip/command/geoip@latest
+          go install github.com/v2fly/geoip@latest
 
       - name: Prepare directories
         run: |
+          # Убеждаемся, что папки существуют
           mkdir -p geosite
           mkdir -p geoip
 
       - name: Build geosite.dat
         run: |
-          # Компилируем домены из папки geosite/
+          # Компиляция доменов
           $(go env GOPATH)/bin/domain-list-community -datapath=geosite/ -outputname=geosite.dat
 
       - name: Build geoip.dat
         run: |
-          # Компилируем IP из папки geoip/
+          # Компиляция IP (теперь используем правильный бинарник geoip)
           $(go env GOPATH)/bin/geoip -i geoip/ -o geoip.dat
 
       - name: Release DAT files
