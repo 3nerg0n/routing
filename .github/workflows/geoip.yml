@@ -1,4 +1,4 @@
-name: Build GeoIP
+name: Build GeoIP Ultimate
 on:
   workflow_dispatch:
   push:
@@ -14,63 +14,40 @@ jobs:
     steps:
       - name: Checkout your repo
         uses: actions/checkout@v4
-        with:
-          path: my_data
 
-      - name: Set up Go
-        uses: actions/setup-go@v5
-        with:
-          go-version: '>=1.21'
-
-      # ШАГ 1: Исправляем IP (добавляем /32 там, где его нет)
+      # ШАГ 1: Исправляем IP-адреса (автоматически добавляем /32 и чистим мусор)
       - name: Fix IP format
         run: |
-          find my_data/geoip -type f | while read file; do
-            # Удаляем пустые строки и пробелы
+          find geoip -type f | while read file; do
+            # Удаляем пустые строки
             sed -i '/^[[:space:]]*$/d' "$file"
-            # Удаляем комментарии
+            # Удаляем комментарии (строки с #)
             sed -i '/^#/d' "$file"
-            # Добавляем /32 к одиночным IP (где нет слэша)
-            sed -i '/^[0-9.]*$/s/$/\/32/' "$file"
+            # Удаляем пробелы в начале и конце строк
+            sed -i 's/^[[:space:]]*//;s/[[:space:]]*$//' "$file"
+            # Добавляем /32 к одиночным IPv4 адресам, где нет слэша
+            sed -i -E 's/^([0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3})$/\1\/32/' "$file"
           done
 
-      # ШАГ 2: Собираем компилятор Loyalsoldier (именно он понимает plaintext)
-      - name: Build Loyalsoldier Compiler
+      # ШАГ 2: Скачиваем готовый компилятор (amd64 версия)
+      - name: Download v2ray-rules-dat
         run: |
-          git clone https://github.com/Loyalsoldier/geoip.git builder
-          cd builder
-          go build -o geoip_tool
+          wget https://github.com/v2fly/v2ray-rules-dat/releases/latest/download/v2ray-rules-dat-linux-amd64.zip
+          unzip v2ray-rules-dat-linux-amd64.zip
+          chmod +x v2ray-rules-dat
 
-      # ШАГ 3: Генерируем ПРАВИЛЬНЫЙ config.json и собираем .dat
-      - name: Generate Config and Build
+      # ШАГ 3: Собираем geoip.dat (каждый файл в папке станет тегом)
+      - name: Build geoip.dat
         run: |
-          cd builder
-          # Генерируем конфиг. ВАЖНО: тип должен быть "plaintext"
-          echo '{"input": [' > config.json
-          first=true
-          # Перебираем все файлы из твоей папки geoip
-          for f in ../my_data/geoip/*; do
-            name=$(basename "$f")
-            if [ "$first" = true ]; then first=false; else echo ',' >> config.json; fi
-            # Используем тип plaintext, который понимает этот сборщик
-            echo "{\"type\": \"plaintext\", \"action\": \"add\", \"args\": {\"name\": \"$name\", \"uri\": \"../my_data/geoip/$name\"}}" >> config.json
-          done
-          echo '], "output": [{"type": "v2raygeoip", "action": "output", "args": {"uri": "geoip.dat"}}]}' >> config.json
-          
-          # Запускаем сборку
-          ./geoip_tool convert -c config.json
-          
-          # Создаем папку для релиза
-          mkdir -p ../release
-          cp output/dat/geoip.dat ../release/
+          ./v2ray-rules-dat -type geoip -dir geoip/ -output geoip.dat
 
-      # ШАГ 4: Публикация
+      # ШАГ 4: Публикация в Releases
       - name: Release
         uses: softprops/action-gh-release@v2
         with:
           tag_name: latest
           name: "Latest GeoIP Build"
-          files: release/geoip.dat
+          files: geoip.dat
           make_latest: true
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
