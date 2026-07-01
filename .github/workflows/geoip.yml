@@ -1,9 +1,9 @@
-name: Build GeoIP Ultimate
+name: Build GeoIP Hydra
 on:
   workflow_dispatch:
   push:
     branches: [ master, main ]
-    paths: [ 'geoip/**' ]
+    paths: [ 'geoip/**', 'config.json' ]
 
 permissions:
   contents: write
@@ -14,40 +14,50 @@ jobs:
     steps:
       - name: Checkout your repo
         uses: actions/checkout@v4
+        with:
+          path: main
 
-      # ШАГ 1: Исправляем IP-адреса (автоматически добавляем /32 и чистим мусор)
-      - name: Fix IP format
+      - name: Checkout Loyalsoldier builder
+        uses: actions/checkout@v4
+        with:
+          repository: Loyalsoldier/geoip
+          path: builder
+
+      - name: Setup Go
+        uses: actions/setup-go@v5
+        with:
+          go-version: '>=1.21'
+
+      # Автоматически исправляем формат IP (добавляем /32 к одиночным адресам)
+      - name: Fix CIDR and Clean Files
         run: |
-          find geoip -type f | while read file; do
-            # Удаляем пустые строки
-            sed -i '/^[[:space:]]*$/d' "$file"
-            # Удаляем комментарии (строки с #)
-            sed -i '/^#/d' "$file"
-            # Удаляем пробелы в начале и конце строк
-            sed -i 's/^[[:space:]]*//;s/[[:space:]]*$//' "$file"
-            # Добавляем /32 к одиночным IPv4 адресам, где нет слэша
+          find main/geoip -type f | while read file; do
+            sed -i '/^[[:space:]]*$/d' "$file" # Удалить пустые строки
+            sed -i '/^#/d' "$file"             # Удалить комментарии
+            sed -i 's/^[[:space:]]*//;s/[[:space:]]*$//' "$file" # Убрать пробелы
+            # Если в строке только IP без слэша - добавить /32
             sed -i -E 's/^([0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3})$/\1\/32/' "$file"
           done
 
-      # ШАГ 2: Скачиваем готовый компилятор (amd64 версия)
-      - name: Download v2ray-rules-dat
-        run: |
-          wget https://github.com/v2fly/v2ray-rules-dat/releases/latest/download/v2ray-rules-dat-linux-amd64.zip
-          unzip v2ray-rules-dat-linux-amd64.zip
-          chmod +x v2ray-rules-dat
-
-      # ШАГ 3: Собираем geoip.dat (каждый файл в папке станет тегом)
       - name: Build geoip.dat
         run: |
-          ./v2ray-rules-dat -type geoip -dir geoip/ -output geoip.dat
+          cd builder
+          # Собираем сам инструмент компиляции
+          go build -o geoip_tool
+          # Копируем твои данные внутрь сборщика
+          cp ../main/config.json .
+          cp -r ../main/geoip .
+          # Запускаем сборку по твоему конфигу
+          ./geoip_tool convert -c config.json
+          # Подготавливаем файл для релиза
+          mkdir -p ../release
+          cp output/dat/geoip.dat ../release/
 
-      # ШАГ 4: Публикация в Releases
       - name: Release
         uses: softprops/action-gh-release@v2
         with:
           tag_name: latest
-          name: "Latest GeoIP Build"
-          files: geoip.dat
+          files: release/geoip.dat
           make_latest: true
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
