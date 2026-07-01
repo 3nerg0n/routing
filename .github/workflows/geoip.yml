@@ -1,4 +1,4 @@
-name: Build GeoIP Hydra Style
+name: Build GeoIP Final Fix
 on:
   workflow_dispatch:
   push:
@@ -28,33 +28,32 @@ jobs:
         with:
           go-version: '>=1.21'
 
-      # ШАГ 1: Подготовка файлов (как в оригинале)
+      # ШАГ 1: Очистка и копирование файлов ПРЯМО В КОРЕНЬ builder
       - name: Prepare IP files
         run: |
-          mkdir -p builder/input_data
-          echo "--- Cleaning and copying files ---"
+          echo "--- Cleaning and moving files ---"
           find main/geoip -type f | while read file; do
             name=$(basename "$file")
-            # Удаляем мусор, пустые строки и символы Windows
-            # Добавляем /32 только если это чистый IP без маски
+            # Удаляем \r (Windows), комментарии и пробелы
+            # Добавляем /32 только к чистым IPv4 без маски
             sed 's/\r//g; s/#.*//g; s/[[:space:]]//g' "$file" | grep -v '^$' | \
-            sed -E 's/^([0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3})$/\1\/32/' > "builder/input_data/$name"
-            echo "File $name: $(wc -l < builder/input_data/$name) lines"
+            sed -E 's/^([0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3})$/\1\/32/' > "builder/$name"
+            echo "File $name: $(wc -l < builder/$name) lines"
           done
 
-      # ШАГ 2: Генерация config.json (строго по формату hydraponique)
+      # ШАГ 2: Генерация config.json (пути теперь локальные ./)
       - name: Generate Config
         run: |
           cd builder
           echo '{"input": [' > config.json
           FIRST=true
-          for f in input_data/*; do
-            name=$(basename "$f")
-            if [ "$FIRST" = true ]; then FIRST=false; else echo ',' >> config.json; fi
-            # ВАЖНО: тип "text", имя тега и относительный путь к файлу
-            echo "{\"type\": \"text\", \"action\": \"add\", \"args\": {\"name\": \"$name\", \"uri\": \"./input_data/$name\"}}" >> config.json
+          # Перебираем файлы, которые мы только что скопировали (исключая системные)
+          for f in AdBlock AlfaBank Gos Local Media Ozon RU SberBank Tinkoff Torrent VTB Vk-Mail Wildberries Yandex; do
+            if [ -f "$f" ]; then
+              if [ "$FIRST" = true ]; then FIRST=false; else echo ',' >> config.json; fi
+              echo "{\"type\": \"text\", \"action\": \"add\", \"args\": {\"name\": \"$f\", \"uri\": \"./$f\"}}" >> config.json
+            fi
           done
-          # Вывод в формате v2rayGeoIPDat (как в оригинале)
           echo '], "output": [{"type": "v2rayGeoIPDat", "action": "output", "args": {"outputName": "geoip.dat"}}]}' >> config.json
           
           echo "--- Generated config.json ---"
@@ -66,17 +65,21 @@ jobs:
           cd builder
           go mod download
           go build -o geoip_tool
+          
           # Запускаем конвертацию
           ./geoip_tool convert -c config.json
           
           # Проверка результата
-          size=$(stat -c%s "output/dat/geoip.dat")
-          echo "--- Final size: $size bytes ---"
-          
           mkdir -p ../release
-          cp output/dat/geoip.dat ../release/
-          
-          if [ $size -le 700 ]; then echo "ERROR: geoip.dat is empty!"; exit 1; fi
+          if [ -f "output/dat/geoip.dat" ]; then
+            cp output/dat/geoip.dat ../release/
+            size=$(stat -c%s "../release/geoip.dat")
+            echo "--- Final size: $size bytes ---"
+            if [ $size -le 700 ]; then echo "ERROR: geoip.dat is still empty!"; exit 1; fi
+          else
+            echo "ERROR: output/dat/geoip.dat not found!"
+            exit 1
+          fi
 
       # ШАГ 4: Публикация
       - name: Release
