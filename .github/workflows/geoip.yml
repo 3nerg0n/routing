@@ -28,50 +28,45 @@ jobs:
         with:
           go-version: '>=1.21'
 
-      # ШАГ 1: Очистка файлов и копирование ВНУТРЬ папки builder
-      - name: Clean and Prepare IP files
+      - name: Build and Run
         run: |
-          mkdir -p builder/data_input
-          echo "--- Processing files ---"
-          find main/geoip -type f | while read file; do
-            name=$(basename "$file")
-            # Удаляем символы Windows (\r), комментарии (#) и лишние пробелы
-            # Мы НЕ добавляем /32 принудительно, сборщик сам поймет одиночные IP
-            sed 's/\r//g; s/#.*//g; s/[[:space:]]//g' "$file" | grep -v '^$' > "builder/data_input/$name"
-            echo "File $name: $(wc -l < builder/data_input/$name) lines"
-          done
-
-      # ШАГ 2: Генерация конфига и сборка
-      - name: Build geoip.dat
-        run: |
+          # 1. Собираем сам инструмент компиляции
           cd builder
-          # Собираем сам инструмент
           go build -o geoip_tool
           
-          # Генерируем config.json (тип "text" и локальные пути)
+          # 2. Готовим папку с данными (копируем твои файлы)
+          mkdir -p ../data_input
+          cp -rf ../main/geoip/* ../data_input/
+          
+          # 3. Генерируем config.json с АБСОЛЮТНЫМИ путями
+          # Это гарантирует, что сборщик увидит файлы
+          DATA_DIR=$(realpath ../data_input)
+          
           echo '{"input": [' > config.json
           FIRST=true
-          for f in data_input/*; do
+          for f in $DATA_DIR/*; do
             name=$(basename "$f")
             if [ "$FIRST" = true ]; then FIRST=false; else echo ',' >> config.json; fi
-            echo "{\"type\": \"text\", \"action\": \"add\", \"args\": {\"name\": \"$name\", \"uri\": \"./data_input/$name\"}}" >> config.json
+            echo "{\"type\": \"text\", \"action\": \"add\", \"args\": {\"name\": \"$name\", \"uri\": \"$f\"}}" >> config.json
           done
           echo '], "output": [{"type": "v2rayGeoIPDat", "action": "output", "args": {"outputName": "geoip.dat"}}]}' >> config.json
           
-          echo "--- Generated config.json ---"
+          echo "--- Generated Config ---"
           cat config.json
-
-          # Запускаем конвертацию
+          
+          # 4. Запускаем конвертацию
           ./geoip_tool convert -c config.json
           
-          # Проверка результата
+          # 5. Проверяем результат
+          size=$(stat -c%s "output/dat/geoip.dat")
+          echo "--- Final size: $size bytes ---"
+          
           mkdir -p ../release
           cp output/dat/geoip.dat ../release/
-          size=$(stat -c%s "../release/geoip.dat")
-          echo "--- Final size: $size bytes ---"
-          if [ $size -le 700 ]; then echo "ERROR: File is still empty!"; exit 1; fi
+          
+          # Если файл все еще пустой, принудительно завершаем с ошибкой
+          if [ $size -le 700 ]; then echo "ERROR: geoip.dat is empty!"; exit 1; fi
 
-      # ШАГ 3: Публикация в Releases
       - name: Release
         uses: softprops/action-gh-release@v2
         with:
