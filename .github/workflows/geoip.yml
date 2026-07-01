@@ -1,4 +1,4 @@
-name: Build GeoIP Hydra Style
+name: Build GeoIP Final Fix
 on:
   workflow_dispatch:
   push:
@@ -28,32 +28,30 @@ jobs:
         with:
           go-version: '>=1.21'
 
-      # ШАГ 1: Очистка и подготовка файлов
+      # ШАГ 1: Подготовка файлов (простое копирование и удаление мусора)
       - name: Prepare IP files
         run: |
           mkdir -p builder/data
-          echo "--- Cleaning files ---"
-          find main/geoip -type f | while read file; do
+          echo "--- Copying and cleaning files ---"
+          for file in main/geoip/*; do
             name=$(basename "$file")
-            # Удаляем \r, комментарии и пробелы. Оставляем только чистые IP/CIDR.
-            tr -d '\r' < "$file" | sed 's/#.*//g; s/[[:space:]]//g' | grep -v '^$' > "builder/data/$name"
-            echo "File $name: $(wc -l < builder/data/name) lines"
+            # Удаляем символы Windows (\r) и пустые строки
+            tr -d '\r' < "$file" | grep -v '^$' > "builder/data/$name"
+            echo "File $name: $(wc -l < builder/data/$name) lines"
           done
 
-      # ШАГ 2: Генерация config.json (строго по формату hydraponique)
+      # ШАГ 2: Генерация config.json (тип "text", без фильтров)
       - name: Generate Config
         run: |
           cd builder
           echo '{"input": [' > config.json
           FIRST=true
-          # Перебираем файлы в папке data
           for f in data/*; do
             name=$(basename "$f")
             if [ "$FIRST" = true ]; then FIRST=false; else echo ',' >> config.json; fi
-            # Используем тип "text" и добавляем onlyIPType для надежности
-            echo "{\"type\": \"text\", \"action\": \"add\", \"args\": {\"name\": \"$name\", \"uri\": \"./data/$name\", \"onlyIPType\": \"ipv4\"}}" >> config.json
+            # Используем тип "text" - это стандарт для Loyalsoldier
+            echo "{\"type\": \"text\", \"action\": \"add\", \"args\": {\"name\": \"$name\", \"uri\": \"./data/$name\"}}" >> config.json
           done
-          # Вывод в формате v2rayGeoIPDat
           echo '], "output": [{"type": "v2rayGeoIPDat", "action": "output", "args": {"outputName": "geoip.dat"}}]}' >> config.json
           
           echo "--- Generated config.json ---"
@@ -63,20 +61,14 @@ jobs:
       - name: Build geoip.dat
         run: |
           cd builder
-          # Запускаем сборку напрямую через go run
           go run ./ convert -c config.json
           
           # Проверка результата
           mkdir -p ../release
-          if [ -f "output/dat/geoip.dat" ]; then
-            cp output/dat/geoip.dat ../release/
-            size=$(stat -c%s "../release/geoip.dat")
-            echo "--- Final size: $size bytes ---"
-            if [ $size -le 700 ]; then echo "ERROR: geoip.dat is still empty!"; exit 1; fi
-          else
-            echo "ERROR: output/dat/geoip.dat not found!"
-            exit 1
-          fi
+          cp output/dat/geoip.dat ../release/
+          size=$(stat -c%s "../release/geoip.dat")
+          echo "--- Final size: $size bytes ---"
+          if [ $size -le 700 ]; then echo "ERROR: geoip.dat is still empty!"; exit 1; fi
 
       # ШАГ 4: Публикация
       - name: Release
