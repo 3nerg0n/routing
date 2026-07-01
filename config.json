@@ -1,0 +1,25 @@
+{
+  "input": [
+    { "type": "text", "action": "add", "args": { "name": "AdBlock", "uri": "geoip/AdBlock" } },
+    { "type": "text", "action": "add", "args": { "name": "AlfaBank", "uri": "geoip/AlfaBank" } },
+    { "type": "text", "action": "add", "args": { "name": "Gos", "uri": "geoip/Gos" } },
+    { "type": "text", "action": "add", "args": { "name": "Local", "uri": "geoip/Local" } },
+    { "type": "text", "action": "add", "args": { "name": "Media", "uri": "geoip/Media" } },
+    { "type": "text", "action": "add", "args": { "name": "Ozon", "uri": "geoip/Ozon" } },
+    { "type": "text", "action": "add", "args": { "name": "RU", "uri": "geoip/RU" } },
+    { "type": "text", "action": "add", "args": { "name": "SberBank", "uri": "geoip/SberBank" } },
+    { "type": "text", "action": "add", "args": { "name": "Tinkoff", "uri": "geoip/Tinkoff" } },
+    { "type": "text", "action": "add", "args": { "name": "Torrent", "uri": "geoip/Torrent" } },
+    { "type": "text", "action": "add", "args": { "name": "VTB", "uri": "geoip/VTB" } },
+    { "type": "text", "action": "add", "args": { "name": "Vk-Mail", "uri": "geoip/Vk-Mail" } },
+    { "type": "text", "action": "add", "args": { "name": "Wildberries", "uri": "geoip/Wildberries" } },
+    { "type": "text", "action": "add", "args": { "name": "Yandex", "uri": "geoip/Yandex" } }
+  ],
+  "output": [
+    {
+      "type": "v2raygeoip",
+      "action": "output",
+      "args": { "uri": "geoip.dat" }
+    }
+  ]
+}
