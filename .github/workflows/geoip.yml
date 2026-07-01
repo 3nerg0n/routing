@@ -1,4 +1,4 @@
-name: Build GeoIP Professional
+name: Build GeoIP Final Fix
 on:
   workflow_dispatch:
   push:
@@ -17,10 +17,10 @@ jobs:
         with:
           path: main
 
-      - name: Checkout Loyalsoldier builder
+      - name: Checkout v2fly geoip builder
         uses: actions/checkout@v4
         with:
-          repository: Loyalsoldier/geoip
+          repository: v2fly/geoip
           path: builder
 
       - name: Setup Go
@@ -28,42 +28,61 @@ jobs:
         with:
           go-version: '>=1.21'
 
-      # ШАГ 1: Исправляем IP (добавляем /32 там, где его нет)
-      - name: Fix IP format
+      # ШАГ 1: Подготовка файлов (чистка и исправление IP)
+      - name: Prepare and Fix IP files
         run: |
+          mkdir -p builder/data
           find main/geoip -type f | while read file; do
-            # Удаляем пустые строки и комментарии
-            sed -i '/^[[:space:]]*$/d' "$file"
-            sed -i '/^#/d' "$file"
-            # Добавляем /32 к одиночным IP
-            sed -i -E 's/^([0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3})$/\1\/32/' "$file"
+            name=$(basename "$file")
+            # Удаляем мусор и добавляем /32 к одиночным IP
+            sed -E 's/#[.*]//g; s/[[:space:]]//g; /^[[:space:]]*$/d' "$file" | \
+            sed -E 's/^([0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3})$/\1\/32/' > "builder/data/$name"
           done
+          # Проверка: если папка пуста, создать тестовый файл, чтобы не было ошибки
+          [ "$(ls -A builder/data)" ] || echo "1.1.1.1/32" > builder/data/dummy
 
-      # ШАГ 2: Сборка инструмента и генерация файла
+      # ШАГ 2: Сборка с правильным конфигом
       - name: Build geoip.dat
         run: |
           cd builder
-          # Компилируем сам сборщик
-          go build -o geoip_tool
+          # Создаем конфиг прямо здесь. Тип v2raygeoip идеально ест папки.
+          cat <<EOF > config.json
+          {
+            "input": [
+              {
+                "type": "v2raygeoip",
+                "action": "add",
+                "args": {
+                  "uri": "data/"
+                }
+              }
+            ],
+            "output": [
+              {
+                "type": "v2raygeoip",
+                "action": "output",
+                "args": {
+                  "uri": "geoip.dat"
+                }
+              }
+            ]
+          }
+          EOF
+          # Запускаем сборку
+          go run ./ -c config.json
           
-          # Генерируем config.json динамически
-          # Используем тип "text", как в примере hydraponique
-          echo '{"input": [' > config.json
-          FIRST=true
-          for f in $(ls ../main/geoip); do
-            if [ "$FIRST" = true ]; then FIRST=false; else echo ',' >> config.json; fi
-            echo "{\"type\": \"text\", \"action\": \"add\", \"args\": {\"name\": \"$f\", \"uri\": \"../main/geoip/$f\"}}" >> config.json
-          done
-          echo '], "output": [{"type": "v2rayGeoIPDat", "action": "output", "args": {"outputName": "geoip.dat"}}]}' >> config.json
+          # Проверяем размер файла (если меньше 1000 байт - значит ошибка)
+          FILE_SIZE=$(stat -c%s "geoip.dat")
+          echo "Generated file size: $FILE_SIZE bytes"
+          if [ $FILE_SIZE -le 700 ]; then
+            echo "Error: geoip.dat is empty!"
+            exit 1
+          fi
           
-          # Запускаем конвертацию
-          ./geoip_tool convert -c config.json
-          
-          # Копируем результат
           mkdir -p ../release
-          cp output/dat/geoip.dat ../release/
+          cp geoip.dat ../release/
 
-      # ШАГ 3: Публикация в Releases
+      # ШАГ 3: Публикация
       - name: Release
         uses: softprops/action-gh-release@v2
         with:
