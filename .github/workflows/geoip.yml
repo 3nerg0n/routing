@@ -1,4 +1,4 @@
-name: Build GeoIP Final Fix
+name: Build GeoIP Hydra Style
 on:
   workflow_dispatch:
   push:
@@ -28,46 +28,43 @@ jobs:
         with:
           go-version: '>=1.21'
 
-      # ШАГ 1: Очистка и копирование файлов ПРЯМО В КОРЕНЬ builder
+      # ШАГ 1: Очистка и подготовка файлов
       - name: Prepare IP files
         run: |
-          echo "--- Cleaning and moving files ---"
+          mkdir -p builder/data
+          echo "--- Cleaning files ---"
           find main/geoip -type f | while read file; do
             name=$(basename "$file")
-            # Удаляем \r (Windows), комментарии и пробелы
-            # Добавляем /32 только к чистым IPv4 без маски
-            sed 's/\r//g; s/#.*//g; s/[[:space:]]//g' "$file" | grep -v '^$' | \
-            sed -E 's/^([0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3})$/\1\/32/' > "builder/$name"
-            echo "File $name: $(wc -l < builder/$name) lines"
+            # Удаляем \r, комментарии и пробелы. Оставляем только чистые IP/CIDR.
+            tr -d '\r' < "$file" | sed 's/#.*//g; s/[[:space:]]//g' | grep -v '^$' > "builder/data/$name"
+            echo "File $name: $(wc -l < builder/data/name) lines"
           done
 
-      # ШАГ 2: Генерация config.json (пути теперь локальные ./)
+      # ШАГ 2: Генерация config.json (строго по формату hydraponique)
       - name: Generate Config
         run: |
           cd builder
           echo '{"input": [' > config.json
           FIRST=true
-          # Перебираем файлы, которые мы только что скопировали (исключая системные)
-          for f in AdBlock AlfaBank Gos Local Media Ozon RU SberBank Tinkoff Torrent VTB Vk-Mail Wildberries Yandex; do
-            if [ -f "$f" ]; then
-              if [ "$FIRST" = true ]; then FIRST=false; else echo ',' >> config.json; fi
-              echo "{\"type\": \"text\", \"action\": \"add\", \"args\": {\"name\": \"$f\", \"uri\": \"./$f\"}}" >> config.json
-            fi
+          # Перебираем файлы в папке data
+          for f in data/*; do
+            name=$(basename "$f")
+            if [ "$FIRST" = true ]; then FIRST=false; else echo ',' >> config.json; fi
+            # Используем тип "text" и добавляем onlyIPType для надежности
+            echo "{\"type\": \"text\", \"action\": \"add\", \"args\": {\"name\": \"$name\", \"uri\": \"./data/$name\", \"onlyIPType\": \"ipv4\"}}" >> config.json
           done
+          # Вывод в формате v2rayGeoIPDat
           echo '], "output": [{"type": "v2rayGeoIPDat", "action": "output", "args": {"outputName": "geoip.dat"}}]}' >> config.json
           
           echo "--- Generated config.json ---"
           cat config.json
 
-      # ШАГ 3: Сборка инструмента и запуск
-      - name: Build and Run
+      # ШАГ 3: Сборка
+      - name: Build geoip.dat
         run: |
           cd builder
-          go mod download
-          go build -o geoip_tool
-          
-          # Запускаем конвертацию
-          ./geoip_tool convert -c config.json
+          # Запускаем сборку напрямую через go run
+          go run ./ convert -c config.json
           
           # Проверка результата
           mkdir -p ../release
