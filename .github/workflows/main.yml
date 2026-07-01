@@ -17,16 +17,23 @@ jobs:
 
       - name: Install v2ray-rules-dat
         run: |
-          wget https://github.com/v2fly/v2ray-rules-dat/releases/latest/download/v2ray-rules-dat-linux-64.zip
-          unzip v2ray-rules-dat-linux-64.zip
+          # Исправленная ссылка (добавлено amd64)
+          wget https://github.com/v2fly/v2ray-rules-dat/releases/latest/download/v2ray-rules-dat-linux-amd64.zip
+          unzip v2ray-rules-dat-linux-amd64.zip
           chmod +x v2ray-rules-dat
+
+      - name: Prepare directories
+        run: |
+          # Создаем папки, если их забыли создать вручную
+          mkdir -p geosite
+          mkdir -p geoip
 
       - name: Compile DAT files
         run: |
           ./v2ray-rules-dat -type geosite -dir geosite/ -output geosite.dat
           ./v2ray-rules-dat -type geoip -dir geoip/ -output geoip.dat
 
-      - name: Upload to Release
+      - name: Release DAT files
         uses: softprops/action-gh-release@v1
         with:
           tag_name: latest
