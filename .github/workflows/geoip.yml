@@ -1,4 +1,4 @@
-name: Build GeoIP GeositeStyle
+name: Build GeoIP Final Fix
 on:
   workflow_dispatch:
   push:
@@ -17,7 +17,6 @@ jobs:
         with:
           path: main
 
-      # Клонируем правильный сборщик (как в geosite)
       - name: Checkout Loyalsoldier builder
         uses: actions/checkout@v4
         with:
@@ -29,50 +28,50 @@ jobs:
         with:
           go-version: '>=1.21'
 
-      # ШАГ 1: Исправляем формат IP (добавляем /32 и чистим мусор)
-      - name: Fix IP format
+      # ШАГ 1: Очистка файлов и копирование ВНУТРЬ папки builder
+      - name: Clean and Prepare IP files
         run: |
-          mkdir -p cleaned_geoip
+          mkdir -p builder/data_input
+          echo "--- Processing files ---"
           find main/geoip -type f | while read file; do
             name=$(basename "$file")
-            # Удаляем \r, комментарии, пробелы и пустые строки
-            # Добавляем /32 к одиночным IP
-            sed 's/\r//g; s/#.*//g; s/[[:space:]]//g' "$file" | grep -v '^$' | \
-            sed -E 's/^([0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3})$/\1\/32/' > "cleaned_geoip/$name"
-            echo "File $name: $(wc -l < cleaned_geoip/$name) IPs"
+            # Удаляем символы Windows (\r), комментарии (#) и лишние пробелы
+            # Мы НЕ добавляем /32 принудительно, сборщик сам поймет одиночные IP
+            sed 's/\r//g; s/#.*//g; s/[[:space:]]//g' "$file" | grep -v '^$' > "builder/data_input/$name"
+            echo "File $name: $(wc -l < builder/data_input/$name) lines"
           done
 
-      # ШАГ 2: Сборка (Генерируем конфиг и запускаем)
+      # ШАГ 2: Генерация конфига и сборка
       - name: Build geoip.dat
         run: |
-          # Заходим в папку сборщика
           cd builder
+          # Собираем сам инструмент
+          go build -o geoip_tool
           
-          # Генерируем config.json (используем тип plaintext и абсолютные пути)
-          CLEANED_PATH=$(pwd)/../cleaned_geoip
+          # Генерируем config.json (тип "text" и локальные пути)
           echo '{"input": [' > config.json
           FIRST=true
-          for f in $CLEANED_PATH/*; do
+          for f in data_input/*; do
             name=$(basename "$f")
             if [ "$FIRST" = true ]; then FIRST=false; else echo ',' >> config.json; fi
-            echo "{\"type\": \"plaintext\", \"action\": \"add\", \"args\": {\"name\": \"$name\", \"uri\": \"$f\"}}" >> config.json
+            echo "{\"type\": \"text\", \"action\": \"add\", \"args\": {\"name\": \"$name\", \"uri\": \"./data_input/$name\"}}" >> config.json
           done
           echo '], "output": [{"type": "v2rayGeoIPDat", "action": "output", "args": {"outputName": "geoip.dat"}}]}' >> config.json
           
-          echo "--- Generated Config ---"
+          echo "--- Generated config.json ---"
           cat config.json
 
-          # Запускаем сборку
-          go run ./ convert -c config.json
+          # Запускаем конвертацию
+          ./geoip_tool convert -c config.json
           
-          # Проверяем результат
+          # Проверка результата
           mkdir -p ../release
           cp output/dat/geoip.dat ../release/
           size=$(stat -c%s "../release/geoip.dat")
           echo "--- Final size: $size bytes ---"
-          if [ $size -le 700 ]; then echo "Error: File is empty"; exit 1; fi
+          if [ $size -le 700 ]; then echo "ERROR: File is still empty!"; exit 1; fi
 
-      # ШАГ 3: Публикация
+      # ШАГ 3: Публикация в Releases
       - name: Release
         uses: softprops/action-gh-release@v2
         with:
