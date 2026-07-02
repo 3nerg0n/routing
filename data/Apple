@@ -14,8 +14,22 @@ crl4.digicert.com
 ocsp.digicert.cn
 ocsp.digicert.com
 # Push & Identity
+
 push.apple.com
 identity.apple.com
+# Основные пуши
+apple.com
+push.apple.com
+courier.push.apple.com
+# Поддомены для разных регионов
+courier-push-apple-com
+# Резервные каналы
+akadns.net
+digicert.com
+# Системные службы связи
+itunes.com
+mzstatic.com
+
 # Apple Update
 appldnld.apple.com
 configuration.apple.com
