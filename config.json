@@ -1,6 +1,7 @@
 {
   "input": [
     { "type": "text", "action": "add", "args": { "name": "AdBlock", "uri": "./data/AdBlock" } },
+    { "type": "text", "action": "add", "args": { "name": "AdBlock", "uri": "./data/Apple" } },
     { "type": "text", "action": "add", "args": { "name": "AlfaBank", "uri": "./data/AlfaBank" } },
     { "type": "text", "action": "add", "args": { "name": "Gos", "uri": "./data/Gos" } },
     { "type": "text", "action": "add", "args": { "name": "Local", "uri": "./data/Local" } },
