@@ -1,0 +1,28 @@
+# Основные шлюзы уведомлений
+domain:push.apple.com
+domain:courier.push.apple.com
+keyword:courier-push-apple-com
+
+# Авторизация и идентификация устройства (APNs требует этого)
+domain:appleid.apple.com
+domain:identity.apple.com
+domain:gsa.apple.com
+domain:gsas.apple.com
+domain:albert.apple.com
+domain:static.ips.apple.com
+
+# Вспомогательные службы для пушей
+domain:bag.itunes.apple.com
+domain:hummingbird.apple.com
+domain:init.itunes.apple.com
+
+# Проверка сертификатов (если они не пройдут, пуш не расшифруется)
+domain:ocsp.apple.com
+domain:crl.apple.com
+domain:certs.apple.com
+domain:valid.apple.com
+
+# iCloud шлюзы, через которые часто инициируются пуши
+domain:gateway.icloud.com
+domain:setup.icloud.com
+domain:p-events-delivery.icloud.com
