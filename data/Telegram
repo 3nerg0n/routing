@@ -1,7 +1,30 @@
+# --- Основные домены Telegram ---
 t.me
-tdesktop.com
-telegra.ph
-telegram.dog
 telegram.me
 telegram.org
+telegram.dog
 telegram.space
+telegram.sh
+tdesktop.com
+tdesktop.org
+
+# --- Веб-версии и API ---
+web.telegram.org
+api.telegram.org
+venus.web.telegram.org
+pluto.web.telegram.org
+flora.web.telegram.org
+aurora.web.telegram.org
+vesta.web.telegram.org
+
+# --- Контент и Медиа (CDN, аватарки, файлы) ---
+telegra.ph
+telesco.pe
+tx.me
+graph.org
+legra.ph
+
+# --- Технические и короткие ссылки ---
+t-me.red
+t-me.blue
+t-me.org
