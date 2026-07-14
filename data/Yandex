@@ -1,17 +1,73 @@
+# --- Основные домены и Поиск ---
 ya.ru
 yandex.ru
+yandex.com
+yandex.by
+yandex.kz
+yandex.uz
+yandex.az
+yandex.fr
+
+# --- Технические, CDN и Статика (Критично для скорости) ---
 yandex.net
 yastatic.net
 yastat.net
+yandex.st
+yandex-team.ru
+yandex-team.com
+mc.yandex.ru
+an.yandex.ru
+
+# --- Медиа и Развлечения (Кинопоиск, Музыка) ---
 kinopoisk.ru
+hd.kinopoisk.ru
 music.yandex.ru
+music.yandex.com
+ott.yandex.ru
+yandex.ru/video
+afisha.yandex.ru
+
+# --- Карты, Навигатор и Транспорт ---
 maps.yandex.ru
+yandex.ru/maps
+yandex.ru/bus
+yandex.ru/metro
+yandex.ru/trains
+yandex.ru/tutu
+
+# --- Маркет и Объявления ---
 market.yandex.ru
+pokupki.market.yandex.ru
+beru.ru
+auto.ru
+realty.yandex.ru
+travel.yandex.ru
+uslugi.yandex.ru
+
+# --- Яндекс Go (Такси, Еда, Лавка, Доставка) ---
+go.yandex
+taxi.yandex.ru
+eda.yandex.ru
+lavka.yandex.ru
+delivery.yandex.ru
+
+# --- Дзен (Dzen) ---
 dzen.ru
-turbopages.org
+dzeninfra.ru
+
+# --- Облако и Почта ---
 yandex.cloud
 yandex.aero
+mail.yandex.ru
+disk.yandex.ru
+telemost.yandex.ru
+
+# --- Умный дом и Алиса ---
+alice.yandex.ru
+quasar.yandex.ru
+smartdevices.yandex.ru
+
+# --- Аналитика и Реклама ---
 yandexmetrica.com
-dzeninfra.ru
-auto.ru
-yandex.st
+yandex.ru/ads
+appmetrica.yandex.ru
