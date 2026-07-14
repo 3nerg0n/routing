@@ -1,9 +1,32 @@
-googlevideo.com
-withyoutube.com
-youtu.be
+# --- Основные домены YouTube ---
 youtube.com
-youtubeeducation.com
-youtubeembeddedplayer.google.com
-youtube-nocookie.com
+youtu.be
 yt.be
+youtube-nocookie.com
+youtubeeducation.com
+withyoutube.com
+youtubeembeddedplayer.google.com
+
+# --- Видеопоток и CDN (Самое важное для скорости) ---
+googlevideo.com
+video-stats.l.google.com
+redirector.googlevideo.com
+manifest.googlevideo.com
+
+# --- Картинки, превью и статика ---
 ytimg.com
+ggpht.com
+yt3.ggpht.com
+yt4.ggpht.com
+googleusercontent.com
+
+# --- Технические API и авторизация ---
+youtubei.googleapis.com
+jnn-pa.googleapis.com
+youtube.googleapis.com
+widevine.com
+gvt1.com
+
+# --- Реклама и аналитика (иногда нужны для работы плеера) ---
+s.youtube.com
+video-stats.l.google.com
