@@ -1,7 +1,37 @@
+# --- Основные домены Wildberries ---
 wildberries.ru
 wb.ru
-wbbasket.ru
-wbstatic.net
+m.wildberries.ru
+
+# --- ВБ Банк (Критично для оплаты и кошелька) ---
+wildberriesbank.ru
 vbank.ru
 bank.wildberries.ru
-wildberriesbank.ru
+api.vbank.ru
+static.vbank.ru
+wb-bank.ru
+
+# --- Статика и CDN (Картинки товаров, скрипты, видео) ---
+wbstatic.net
+wbbasket.ru
+wb-static.ru
+wb-basket.ru
+images.wildberries.ru
+cdn.wildberries.ru
+
+# --- Технические и API (Для работы мобильного приложения) ---
+api.wildberries.ru
+catalog.api.wildberries.ru
+search.api.wildberries.ru
+chat.api.wildberries.ru
+mobile-api.wildberries.ru
+
+# --- Для продавцов (Селлер) ---
+seller.wildberries.ru
+suppliers-portal.wildberries.ru
+
+# --- СНГ (Если актуально) ---
+wildberries.by
+wildberries.kz
+wildberries.uz
+wildberries.am
