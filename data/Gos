@@ -1,31 +1,71 @@
+# --- Госуслуги и Авторизация (ЕСИА) ---
 gosuslugi.ru
 gu-st.ru
 goskey.ru
+gosuslugi.dev
+gosuslugi.net
+pos.gosuslugi.ru
+esia.gosuslugi.ru
+lk.gosuslugi.ru
+
+# --- Налоги и Финансы ---
 nalog.ru
 nalog.gov.ru
-emias.info
-mos.ru
-pfr.gov.ru
-zakupki.gov.ru
-kremlin.ru
-government.ru
-gov.ru
-mil.ru
-edu.ru
+lkfl2.nalog.ru
+lknpd.nalog.ru
 cbr.ru
-cikrf.ru
 ebs.ru
-grfc.ru
-izbirkom.ru
-fss.ru
-maks.ru
-messenger.maks.ru
-rt.ru
-rostelecom.ru
+budget.gov.ru
+
+# --- Платежные системы (Mir Pay, СБП, НСПК) ---
 nspk.ru
 mirpayonline.ru
 mironline.ru
 sbp.ru
 qr.nspk.ru
 privetmir.ru
-cbr.ru
+pay.nspk.ru
+
+# --- Здравоохранение и Соцзащита ---
+emias.info
+mgfoms.ru
+pfr.gov.ru
+fss.ru
+sfr.gov.ru
+rosminzdrav.ru
+
+# --- Региональные и Городские сервисы ---
+mos.ru
+mosreg.ru
+uslugi.mosreg.ru
+my.spb.ru
+
+# --- Ведомства и Правительство ---
+kremlin.ru
+government.ru
+gov.ru
+mil.ru
+edu.ru
+cikrf.ru
+izbirkom.ru
+grfc.ru
+rkn.gov.ru
+mvd.ru
+fssp.gov.ru
+rosreestr.gov.ru
+customs.gov.ru
+zakupki.gov.ru
+
+# --- Инфраструктура и Связь (Ростелеком, Maks) ---
+rt.ru
+rostelecom.ru
+rt-static.ru
+maks.ru
+messenger.maks.ru
+pda.maks.ru
+
+# --- Образование и Прочее ---
+dnevnik.ru
+uchebnik.mos.ru
+rsv.ru
+znanierussia.ru
