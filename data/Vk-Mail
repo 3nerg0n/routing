@@ -1,22 +1,56 @@
+# --- Основные домены VK ---
 vk.com
+vk.ru
+m.vk.com
+m.vk.ru
+vkontakte.ru
+m.vkontakte.ru
+
+# --- Короткие ссылки и мессенджер ---
 vk.me
 vk.cc
-vkvideo.ru
-userapi.com
-ok.ru
-mail.ru
-imgsmail.ru
-youla.ru
 vk.link
+vkmessenger.com
+mvk.com
+
+# --- Видео и тяжелый контент (CDN) ---
+vkvideo.ru
+vksf.link
+vk-cdn.net
+vk-portal.net
+vk-static.net
+vkcache.com
+vkusercdn.ru
+userapi.com
+vkcloud-static.ru
+
+# --- Почта и экосистема Mail.ru ---
+mail.ru
+my.com
+imgsmail.ru
+mrgcdn.ru
+cloud.mail.ru
+games.mail.ru
+top.mail.ru
+mradx.net
+
+# --- Одноклассники ---
+ok.ru
+okcdn.ru
+mycdn.me
+odnoklassniki.ru
+
+# --- Сервисы и объявления ---
+youla.ru
+youla.io
+am.ru
+vk-apps.com
+
+# --- Корпоративные и аналитика ---
 vk.team
 vk.company
 vk.design
-vk-cdn.net
-vk-portal.net
-vkmessenger.com
-vkontakte.ru
-mycdn.me
-mradx.net
-okcdn.ru
-youla.io
-my.com
+vk.dev
+vk-analytics.ru
+adfox.ru
+admetrica.ru
