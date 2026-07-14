@@ -1,7 +1,29 @@
+# --- Основные домены Ozon ---
 ozon.ru
 ozone.ru
-ozon-st.com
-ozonusercontent.com
+ozon.travel
+ozon.services
+
+# --- Озон Банк (Критично для платежей и приложения) ---
+ozon-bank.ru
 bank.ozon.ru
 finance.ozon.ru
-ozon-bank.ru
+ozonbank.ru
+api.bank.ozon.ru
+static.bank.ozon.ru
+
+# --- Статика и CDN (Картинки товаров и скрипты) ---
+ozon-st.com
+ozon-st.ru
+ozon-st.net
+ozonusercontent.com
+ozon-cdn.ru
+ozon-img.com
+ozon-video.com
+
+# --- Технические и API (Для работы мобильного приложения) ---
+api.ozon.ru
+api-exp.ozon.ru
+cdn.ozon.ru
+edge.ozon.ru
+seller.ozon.ru
