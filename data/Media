@@ -25,8 +25,22 @@ yastat.net
 # --- Wink (Ростелеком) ---
 wink.ru
 wink.video
+wink.rt.ru
+wink-static.ru
+wink-cdn.ru
 itv.rt.ru
 otttv.rt.ru
+smarttv.rt.ru
+iptv.rt.ru
+rt-static.ru
+rt.video
+# --- Видео-потоки (CDN), без них видео не пойдет напрямую ---
+vcdn.biz
+hls.vcdn.biz
+# --- Авторизация и технические домены ---
+rt.ru
+rostelecom.ru
+re-mo.ru
 
 # --- Okko ---
 okko.tv
